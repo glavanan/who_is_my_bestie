@@ -4,15 +4,24 @@ import (
 	"fmt"
 	"net/http"
 	"io/ioutil"
-	"encoding/json"
 	"gopkg.in/mgo.v2"
+	"gopkg.in/mgo.v2/bson"
+	"encoding/json"
 	"strconv"
 )
 
 //store information of match
+//Struct des fiches champ
+type Stat struct {
+	Champion1 int `json:"champion1" bson:"champion1"`
+	Champion2 int `json:"champion2" bson:"champion2"`
+	Games int `json:"games" bson:"games"`
+	Win int `json:"win" bson:"win"`
+}
+
 //Regarde si tu as bien toutes tes info pour pouvoir fill t'es fiches champ
 type Match struct {
-	ParticipantsIdentities []ParticipantIdentity
+	ParticipantIdentities []ParticipantIdentity
 	Participants []Participant
 	Teams []Team
 }
@@ -59,7 +68,6 @@ type Matches_info struct {
 
 type Matches_db struct {
 	MatchId int `json:"matchid" bson:"matchid"`
-	Timestamp int `json:"timestamp" bson:"timestamp"`
 }
 
 // Get the initial conf
@@ -111,18 +119,54 @@ func get_id_match(sumid string) (matchid string) {
 	}
 	i := 0
 	session, err := mgo.Dial("127.0.0.1:27017")
-	session.SetMode(mgo.Strong, true)
+	session.SetMode(mgo.Monotonic, true)
 	c := session.DB("fill").C("id_match")
-	match_db := Matches_db{MatchId: match.Matches[i].MatchId, Timestamp: match.Matches[i].Timestamp}
-	result, err := c.Find(match_db).Count()
-	for result != 0 {
+	result, err := c.Find(bson.M{"matchid" : match.Matches[i].MatchId}).Count()
+	for result != 0 || match.Matches[i].Queue != "TEAM_BUILDER_DRAFT_RANKED_5x5" {
 		i++;
-		match_db := Matches_db{MatchId: match.Matches[i].MatchId, Timestamp: match.Matches[i].Timestamp}
-		result, err = c.Find(match_db).Count()
+		result, err = c.Find(bson.M{"matchid" : match.Matches[i].MatchId}).Count()
 	}
-	c.Insert(match_db)
+	c.Insert(bson.M{"matchid" : match.Matches[i].MatchId})
 	fmt.Println(match.Matches[i].MatchId)
+	session.Close()
 	return strconv.Itoa(match.Matches[i].MatchId)
+}
+
+func fill_db(teamw []int, teaml []int) {
+	session, err := mgo.Dial("127.0.0.1:27017")
+	if err != nil {
+		panic(err)
+	}
+	session.SetMode(mgo.Monotonic, true)
+	c := session.DB("champ").C("stat")
+	var stat Stat
+	for i, elem := range teamw {
+		for j := i + 1; j < len(teamw); j++ {
+			if elem < teamw[j] {
+				c.Find(bson.M{"champion1": elem, "champion2": teamw[j]}).One(&stat)
+				c.Update(bson.M{"champion1": elem, "champion2": teamw[j]}, bson.M{"$set": bson.M{"games": stat.Games + 1, "win": stat.Win + 1}})
+			} else {
+				c.Find(bson.M{"champion1": teamw[j], "champion2": elem}).One(&stat)
+				c.Update(bson.M{"champion1": teamw[j], "champion2": elem}, bson.M{"$set": bson.M{"games": stat.Games + 1, "win": stat.Win + 1}})
+			}
+		c.Find(bson.M{"champion1": elem, "champion2": teamw[j]}).One(&stat)
+		fmt.Println("stat : WIN %i, cahmp1 %i champ2 %i", stat.Win, stat.Games, stat.Champion1, stat.Champion2)
+		}
+	}
+	for i, elem := range teaml {
+		for j := i + 1; j < len(teaml); j++ {
+			if elem < teaml[j] {
+				c.Find(bson.M{"champion1": elem, "champion2": teaml[j]}).One(&stat)
+				c.Update(bson.M{"champion1": elem, "champion2": teaml[j]}, bson.M{"$set": bson.M{"games": stat.Games + 1, "win": stat.Win}})
+			} else {
+				c.Find(bson.M{"champion1": teaml[j], "champion2": elem}).One(&stat)
+				c.Update(bson.M{"champion1": teaml[j], "champion2": elem}, bson.M{"$set": bson.M{"games": stat.Games + 1, "win": stat.Win}})
+			}
+		c.Find(bson.M{"champion1": elem, "champion2": teaml[j]}).One(&stat)
+		fmt.Println("stat : WIN %i, cahmp1 %i champ2 %i", stat.Win, stat.Champion1, stat.Champion2)
+		}
+	}
+	session.Close()
 }
 
 func get_match(matchid string) {
@@ -137,10 +181,30 @@ func get_match(matchid string) {
 	if err != nil {
 		panic(err)
 	}
+	var match Match
+	err = json.Unmarshal(body, &match)
+	var team1, team2 []int
+	for i := 0; i < len(match.Participants); i++ {
+		if match.Participants[i].TeamId == 100 {
+			team1 = append(team1, match.Participants[i].ChampionId)
+		} else {
+			team2 = append(team2, match.Participants[i].ChampionId)
+		}
+	}
+	if match.Teams[0].winner {
+		fill_db(team1, team2)
+	} else {
+		fill_db(team2, team1)
+	}
+	//recuperer la liste des participant, prendre le premeir, ou defrrnier id pas dans la DB
+	//le stocker dans la DB  !
+	fmt.Println(match.ParticipantIdentities[0].ParticipantId)
+	fmt.Println(match.Participants[0].ChampionId)
+	fmt.Println(match.Teams[0].TeamId)
 }
 
 func main() {
-	get_id_match(get_first_id())
+	get_match(get_id_match(get_first_id()))
 }
 
 
