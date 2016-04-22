@@ -168,7 +168,6 @@ func fill_db(teamw []int, teaml []int) {
 				c.Find(bson.M{"champion1": teamw[j], "champion2": elem}).One(&stat)
 				c.Update(bson.M{"champion1": teamw[j], "champion2": elem}, bson.M{"$set": bson.M{"games": stat.Games + 1, "win": stat.Win + 1}})
 			}
-		c.Find(bson.M{"champion1": elem, "champion2": teamw[j]}).One(&stat)
 		}
 	}
 	for i, elem := range teaml {
@@ -180,7 +179,6 @@ func fill_db(teamw []int, teaml []int) {
 				c.Find(bson.M{"champion1": teaml[j], "champion2": elem}).One(&stat)
 				c.Update(bson.M{"champion1": teaml[j], "champion2": elem}, bson.M{"$set": bson.M{"games": stat.Games + 1, "win": stat.Win}})
 			}
-		c.Find(bson.M{"champion1": elem, "champion2": teaml[j]}).One(&stat)
 		}
 	}
 	session.Close()
@@ -213,8 +211,7 @@ func get_match(matchid string) {
 	} else {
 		fill_db(team2, team1)
 	}
-	//recuperer la liste des participant, prendre le premeir, ou defrrnier id pas dans la DB
-	//le stocker dans la DB !
+
 	session, err := mgo.Dial("127.0.0.1:27017")
 	if err != nil {
 		panic(err)
