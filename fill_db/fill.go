@@ -1,12 +1,12 @@
 package main
 
 import (
+	"fmt"
 	"net/http"
 	"io/ioutil"
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
 	"encoding/json"
-	"time"
 	"strconv"
 )
 
@@ -109,6 +109,9 @@ func get_first_id() (sumid string) {
 }
 
 func get_id_player() (sumid string) {
+	if conf.Api_key == "" {
+		fill_conf()
+	}
 	session, err := mgo.Dial("127.0.0.1:27017")
 	if err != nil {
 		panic(err)
@@ -117,6 +120,12 @@ func get_id_player() (sumid string) {
 	c := session.DB("fill").C("id_player")
 	var result Summoner
 	c.Find(bson.M{"last": true}).One(&result)
+	fmt.Println(c.Find(bson.M{"last": true}).Count())
+	session.Close()
+	fmt.Println(result)
+	if result.Summonerid == 0 {
+		return conf.First_id
+	}
 	return strconv.FormatInt(result.Summonerid, 10)
 }
 
@@ -141,14 +150,19 @@ func get_id_match(sumid string) (matchid string) {
 	session, err := mgo.Dial("127.0.0.1:27017")
 	session.SetMode(mgo.Monotonic, true)
 	c := session.DB("fill").C("id_match")
-	result, err := c.Find(bson.M{"matchid" : match.Matches[i].MatchId}).Count()
-	for result != 0 || match.Matches[i].Queue != "TEAM_BUILDER_DRAFT_RANKED_5x5" {
-		i++;
+	result := 1
+	fmt.Println("id ", sumid)
+	for len(match.Matches) > i && (result != 0 || (match.Matches[i].Queue != "TEAM_BUILDER_DRAFT_RANKED_5x5" || match.Matches[i].Queue != "SEASON2016")) {
 		result, err = c.Find(bson.M{"matchid" : match.Matches[i].MatchId}).Count()
+		i++;
+		fmt.Println(i, "mdr", len(match.Matches))
 	}
-	c.Insert(bson.M{"matchid" : match.Matches[i].MatchId})
+	if result > 0 {
+		return strconv.Itoa(match.Matches[i - 1].MatchId)
+	}
+	c.Insert(bson.M{"matchid" : match.Matches[i - 1].MatchId})
 	session.Close()
-	return strconv.Itoa(match.Matches[i].MatchId)
+	return strconv.Itoa(match.Matches[i - 1].MatchId)
 }
 
 func fill_db(teamw []int, teaml []int) {
@@ -163,10 +177,10 @@ func fill_db(teamw []int, teaml []int) {
 		for j := i + 1; j < len(teamw); j++ {
 			if elem < teamw[j] {
 				c.Find(bson.M{"champion1": elem, "champion2": teamw[j]}).One(&stat)
-				c.Update(bson.M{"champion1": elem, "champion2": teamw[j]}, bson.M{"$set": bson.M{"games": stat.Games + 1, "win": stat.Win + 1}})
+				c.Update(bson.M{"champion1": elem,"champion2": teamw[j]}, bson.M{"$set": bson.M{"games": stat.Games + 1,"win": stat.Win + 1}})
 			} else {
-				c.Find(bson.M{"champion1": teamw[j], "champion2": elem}).One(&stat)
-				c.Update(bson.M{"champion1": teamw[j], "champion2": elem}, bson.M{"$set": bson.M{"games": stat.Games + 1, "win": stat.Win + 1}})
+				c.Find(bson.M {	"champion1": teamw[j],"champion2": elem}).One(&stat)
+				c.Update(bson.M{"champion1": teamw[j],"champion2": elem},bson.M{"$set": bson.M{"games": stat.Games + 1,"win": stat.Win + 1}})
 			}
 		}
 	}
@@ -185,6 +199,7 @@ func fill_db(teamw []int, teaml []int) {
 }
 
 func get_match(matchid string) {
+	fmt.Println("Match id : ", matchid)
 	if conf.Api_key == "" {
 		fill_conf()
 	}
@@ -211,23 +226,12 @@ func get_match(matchid string) {
 	} else {
 		fill_db(team2, team1)
 	}
-
-	session, err := mgo.Dial("127.0.0.1:27017")
-	if err != nil {
-		panic(err)
-	}
-	session.SetMode(mgo.Monotonic, true)
-	c := session.DB("fill").C("id_player")
-	c.Remove(bson.M{"last": true})
-	err = c.Insert(bson.M{"summonerid": match.ParticipantIdentities[0].Player.SummonerId, "timestamp": time.Now().Format(time.RFC850), "last" : true})
-	if err != nil {
-		panic(err)
-	}
-	session.Close()
+	give_next_id_player(match.ParticipantIdentities)
 }
 
 func main() {
-	for i := 0; i < 5; i++ {
+	rank = []string {"CHALLENGER", "MASTER", "DIAMOND", "PLATINUM", "GOLD"}
+	for i := 0; i < 3; i++ {
 		get_match(get_id_match(get_id_player()))
 	}
 }

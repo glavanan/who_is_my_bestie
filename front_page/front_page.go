@@ -7,9 +7,12 @@ import (
 	"html/template"
 	"strings"
 	"log"
+	"strconv"
 	"gopkg.in/mgo.v2/bson"
 	"gopkg.in/mgo.v2"
 )
+
+var lst_champ []Champ
 
 type Champ struct {
 	ChampionId int `json:"championId" bson:"championId"`
@@ -23,9 +26,30 @@ type Stat struct {
 	Win int `json:"win" bson:"win"`
 }
 
-func print_ratio(champid int, w http.ResponseWriter) {
-	fmt.Fprint(w, "id : ")
-	fmt.Fprint(w, champid)
+func Get_elem(name string, id int) (Champ){
+	for _, elem := range lst_champ {
+		if elem.Name == name || elem.ChampionId == id {
+			return elem
+		}
+	}
+	var ret Champ
+	ret.ChampionId = 0
+	ret.Name = ""
+	return ret
+}
+
+func return_format_str(elem Stat, id int, name string) (string) {
+	name = Get_elem("", id).Name
+	str := name + " -- Ratio : "
+	ratio := float64(elem.Win) / float64(elem.Games) * float64(100)
+	str = str + strconv.FormatFloat(ratio, 'f', 2, 64)
+	str = str + " -- Games : " + strconv.Itoa(elem.Games)
+	return str
+}
+
+func print_ratio(champid int, champname string, w http.ResponseWriter) {
+	fmt.Fprint(w, "Liste des ratio avec : ")
+	fmt.Fprint(w, champname + "\n")
 	session, err := mgo.Dial("127.0.0.1:27017")
 	if err != nil {
 		panic(err)
@@ -35,12 +59,12 @@ func print_ratio(champid int, w http.ResponseWriter) {
 	var stat []Stat
 	c.Find(bson.M{"champion1": champid}).All(&stat)
 	for _, elem := range stat {
-		fmt.Fprint(w, elem)
+		fmt.Fprint(w, return_format_str(elem, elem.Champion2, champname))
 		fmt.Fprint(w, "\n")
 	}
 	c.Find(bson.M{"champion2": champid}).All(&stat)
 	for _, elem := range stat {
-		fmt.Fprint(w, elem)
+		fmt.Fprint(w, return_format_str(elem, elem.Champion1, champname))
 		fmt.Fprint(w, "\n")
 	}
 }
@@ -58,16 +82,16 @@ func championPage(w http.ResponseWriter, r *http.Request) {
 		}
 		session.SetMode(mgo.Monotonic, true)
 		c := session.DB("champ").C("fiche")
-		var champ Champ
-		err = c.Find(bson.M{"name" : champion}).One(&champ)
+
+		err = c.Find(nil).All(&lst_champ)
+		champ := Get_elem(champion, 0)
 		session.Close()
 		if champ.ChampionId != 0 {
-			print_ratio (champ.ChampionId, w)
+			print_ratio (champ.ChampionId, champ.Name, w)
 		} else {
 			fmt.Fprint(w, "You failed man")
 		}
 	}
-	fmt.Fprint(w, champion)
 }
 
 func acceuil(w http.ResponseWriter, r *http.Request) {
