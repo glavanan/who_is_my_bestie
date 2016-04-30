@@ -8,6 +8,7 @@ import (
 	"strings"
 	"log"
 	"strconv"
+	"github.com/gorilla/mux"
 	"gopkg.in/mgo.v2/bson"
 	"gopkg.in/mgo.v2"
 )
@@ -39,17 +40,18 @@ func Get_elem(name string, id int) (Champ){
 }
 
 func return_format_str(elem Stat, id int, name string) (string) {
-	name = Get_elem("", id).Name
-	str := name + " -- Ratio : "
+//	name = "<div class=\"img \" style=\"height:48px; width:48px; background: url('//ddragon.leagueoflegends.com/cdn/6.9.1/img/champion/" + Get_elem("", id).Name + ".png') -0px -0px no-repeat; background-size: 100% 100%; \" data-rg-name=\"champion\" data-rg-id=" + Get_elem("", id).Name + "></div>"
+	name = "<p><img src=\"http://ddragon.leagueoflegends.com/cdn/6.9.1/img/champion/" + Get_elem("", id).Name + ".png\" data-rg-name=\"champion\" data-rg-id=" + Get_elem("", id).Name + " height=\"48\" width=\"48\">"
+	str := name + Get_elem("", id).Name + " -- Ratio : "
 	ratio := float64(elem.Win) / float64(elem.Games) * float64(100)
 	str = str + strconv.FormatFloat(ratio, 'f', 2, 64)
-	str = str + " -- Games : " + strconv.Itoa(elem.Games)
+	str = str + " -- Games : " + strconv.Itoa(elem.Games) + "</p>"
 	return str
 }
 
 func print_ratio(champid int, champname string, w http.ResponseWriter) {
-	fmt.Fprint(w, "Liste des ratio avec : ")
-	fmt.Fprint(w, champname + "\n")
+//	fmt.Fprint(w, "Liste des ratio avec : ")
+//	fmt.Fprint(w, champname + "\n")
 	session, err := mgo.Dial("127.0.0.1:27017")
 	if err != nil {
 		panic(err)
@@ -58,15 +60,21 @@ func print_ratio(champid int, champname string, w http.ResponseWriter) {
 	c := session.DB("champ").C("stat")
 	var stat []Stat
 	c.Find(bson.M{"champion1": champid}).All(&stat)
+	fmt.Fprint(w, "<html>")
 	for _, elem := range stat {
+		if elem.Games > 9 {
 		fmt.Fprint(w, return_format_str(elem, elem.Champion2, champname))
 		fmt.Fprint(w, "\n")
+		}
 	}
 	c.Find(bson.M{"champion2": champid}).All(&stat)
 	for _, elem := range stat {
+		if elem.Games > 9 {
 		fmt.Fprint(w, return_format_str(elem, elem.Champion1, champname))
 		fmt.Fprint(w, "\n")
+		}
 	}
+	fmt.Fprint(w, "</html>")
 }
 
 func championPage(w http.ResponseWriter, r *http.Request) {
@@ -100,8 +108,12 @@ func acceuil(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
-	http.HandleFunc("/fiche", championPage) // set router
-	http.HandleFunc("/", acceuil) // set router
+	r := mux.NewRouter()
+	r.Host("http://178.62.52.164:9090")
+	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("/root/go/src/who_is_my_bestie/static"))))
+	r.HandleFunc("/fiche", championPage) // set router
+	r.HandleFunc("/", acceuil) // set router
+	http.Handle("/", r)
 	err := http.ListenAndServe(":9090", nil) // set listen port
 	if err != nil {
 		log.Fatal("ListenAndServe: ", err)
