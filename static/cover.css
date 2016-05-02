@@ -1,0 +1,51 @@
+body {
+	background-color: #333;
+
+}
+
+h1 {
+	color: #999;
+
+}
+
+.wrap {
+	position: absolute;
+	width: 100%;
+	height: 100%;
+	float: left;
+	clear: left;
+	top: 150px;
+}
+
+.site-wrapper-inner{
+	display: flex;
+	float:left;
+	height: 200px;
+}
+
+.fiche{
+	display: flex;
+	align-items: center;
+	margin-bottom: 5px;
+	margin-left: 5px;
+	border-radius: 10px;
+	width: 250px;
+	height: 50px;
+	float: left;
+	overflow: hidden
+}
+
+.principal-champ {
+	font-size: 200%;
+	color : #999;
+	left:5px;
+	float:left;
+	position:absolute;
+	top: 20px;
+}
+
+.mine {
+	box-sizing: border-box;
+
+	color: #999;
+}

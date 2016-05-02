@@ -7,6 +7,7 @@ import (
 	"html/template"
 	"strings"
 	"log"
+	"sort"
 	"strconv"
 	"github.com/gorilla/mux"
 	"gopkg.in/mgo.v2/bson"
@@ -14,6 +15,14 @@ import (
 )
 
 var lst_champ []Champ
+
+type Template struct {
+	Champion string
+	Wins int
+	Games int
+	Ratio string
+	Pos bool
+}
 
 type Champ struct {
 	ChampionId int `json:"championId" bson:"championId"`
@@ -27,9 +36,32 @@ type Stat struct {
 	Win int `json:"win" bson:"win"`
 }
 
+type Templates []Template
+
+type Fiche struct {
+	Temp Templates
+	Champ string
+}
+
+var fiche Fiche
+
+func (slice Templates) Len() int {
+	return len(slice)
+}
+
+func (slice Templates) Less(i, j int) bool {
+	ratio1 := float64(slice[i].Wins) / float64(slice[i].Games) * float64(100)
+	ratio2 := float64(slice[j].Wins) / float64(slice[j].Games) * float64(100)
+	return ratio1 > ratio2
+}
+
+func (slice Templates) Swap(i, j int) {
+	slice[i], slice[j] = slice[j], slice[i]
+}
+
 func Get_elem(name string, id int) (Champ){
 	for _, elem := range lst_champ {
-		if elem.Name == name || elem.ChampionId == id {
+		if strings.EqualFold(elem.Name, name) || elem.ChampionId == id {
 			return elem
 		}
 	}
@@ -60,21 +92,27 @@ func print_ratio(champid int, champname string, w http.ResponseWriter) {
 	c := session.DB("champ").C("stat")
 	var stat []Stat
 	c.Find(bson.M{"champion1": champid}).All(&stat)
-	fmt.Fprint(w, "<html>")
+	var temp Templates
 	for _, elem := range stat {
 		if elem.Games > 9 {
-		fmt.Fprint(w, return_format_str(elem, elem.Champion2, champname))
-		fmt.Fprint(w, "\n")
+			value := float64(elem.Win) / float64(elem.Games) * float64(100)
+			ratio := strconv.FormatFloat(value, 'f', 2, 64)
+			temp = append(temp, Template {Champion: Get_elem("", elem.Champion2).Name, Wins: elem.Win, Games: elem.Games, Ratio: ratio, Pos: (value >= 50)})
 		}
 	}
 	c.Find(bson.M{"champion2": champid}).All(&stat)
 	for _, elem := range stat {
 		if elem.Games > 9 {
-		fmt.Fprint(w, return_format_str(elem, elem.Champion1, champname))
-		fmt.Fprint(w, "\n")
+			value := float64(elem.Win) / float64(elem.Games) * float64(100)
+			ratio := strconv.FormatFloat(value, 'f', 2, 64)
+			temp = append(temp, Template {Champion: Get_elem("", elem.Champion1).Name, Wins: elem.Win, Games: elem.Games, Ratio: ratio, Pos: (value >= 50)})
 		}
 	}
-	fmt.Fprint(w, "</html>")
+	fmt.Println(temp.Len())
+	sort.Sort(temp)
+	t, _ := template.ParseFiles("/root/go/src/who_is_my_bestie/templates/fiche.html")
+	fiche.Temp = temp
+	t.Execute(w, &fiche)
 }
 
 func championPage(w http.ResponseWriter, r *http.Request) {
@@ -83,6 +121,7 @@ func championPage(w http.ResponseWriter, r *http.Request) {
 	champ_query := []rune(champion)
 	champ_query[0] = rune(champion[0] - 32)
 	champion = string(champ_query)
+	fiche.Champ = champion
 	if (!strings.ContainsAny(champion, "\",|&*;=%'+-_")) {
 		session, err := mgo.Dial("127.0.0.1:27017")
 		if err != nil {

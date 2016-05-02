@@ -1,0 +1,55 @@
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- The above 3 meta tags *must* come first in the head; any other head content must come *after* these tags -->
+    <meta name="description" content="">
+    <meta name="author" content="">
+
+    <title>Who is your bestie !</title>
+
+    <!-- Bootstrap core CSS -->
+    <link href="/static/bootstrap-3.3.6-dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="/static/cover.css" rel="stylesheet">
+
+
+  </head>
+
+<body>
+
+
+      <div class="principal-champ">
+        <img src="http://ddragon.leagueoflegends.com/cdn/6.9.1/img/champion/{{.Champ}}.png">	Champion : {{.Champ}}
+      </div>
+    <div class="wrap">
+    <div class="site-wrapper-inner">
+
+        <div class="mine">
+        {{with .Temp}}
+          {{range .}}
+            {{if eq .Pos true}}
+                 <div class="fiche" style="background-color: #040">
+            {{else}}
+                 <div class="fiche" style="background-color: #400">
+            {{end}}
+                   <img src="http://ddragon.leagueoflegends.com/cdn/6.9.1/img/champion/{{.Champion}}.png" style="margin-left: 3px;" data-rg-name={{.Champion}} height="48" width="48"> -- Ratio : {{.Ratio}} -- Games: {{.Games}}
+                 </div>
+          {{end}}
+        {{end}}
+        </div>
+
+      </div>
+	</div>
+
+    <!-- Bootstrap core JavaScript
+    ================================================== -->
+    <!-- Placed at the end of the document so the pages load faster -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
+    <script src="/static/bootstrap-3.3.6-dist/js/bootstrap.min.js"></script>
+  </body>
+</html>
+
+
+
+
