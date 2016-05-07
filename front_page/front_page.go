@@ -148,12 +148,12 @@ func acceuil(w http.ResponseWriter, r *http.Request) {
 
 func main() {
 	r := mux.NewRouter()
-	r.Host("http://178.62.52.164:9090")
+	r.Host("http://178.62.52.164")
 	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("/root/go/src/who_is_my_bestie/static"))))
 	r.HandleFunc("/fiche", championPage) // set router
 	r.HandleFunc("/", acceuil) // set router
 	http.Handle("/", r)
-	err := http.ListenAndServe(":9090", nil) // set listen port
+	err := http.ListenAndServe(":80", nil) // set listen port
 	if err != nil {
 		log.Fatal("ListenAndServe: ", err)
 	}
