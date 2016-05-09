@@ -120,7 +120,6 @@ func get_id_player() (sumid string) {
 	c := session.DB("fill").C("id_player")
 	var result Summoner
 	c.Find(bson.M{"last": true}).One(&result)
-	fmt.Println(c.Find(bson.M{"last": true}).Count())
 	session.Close()
 	fmt.Println(result)
 	if result.Summonerid == 0 {
@@ -151,14 +150,12 @@ func get_id_match(sumid string) (matchid string) {
 	session.SetMode(mgo.Monotonic, true)
 	c := session.DB("fill").C("id_match")
 	result := 1
-	fmt.Println("id ", sumid)
 	for len(match.Matches) > i && (result != 0 || (match.Matches[i].Queue != "TEAM_BUILDER_DRAFT_RANKED_5x5" || match.Matches[i].Season != "SEASON2016")) {
 		result, err = c.Find(bson.M{"matchid" : match.Matches[i].MatchId}).Count()
 		i++;
-		fmt.Println(i, "mdr", len(match.Matches))
 	}
+	fmt.Println(i, " game on :", len(match.Matches))
 	if result > 0 || i >= len(match.Matches) {
-		fmt.Println("enter")
 		return strconv.Itoa(match.Matches[0].MatchId)
 	}
 	c.Insert(bson.M{"matchid" : match.Matches[i - 1].MatchId})

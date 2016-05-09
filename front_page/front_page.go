@@ -141,6 +141,12 @@ func championPage(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+
+func about(w http.ResponseWriter, r *http.Request) {
+	t, _ := template.ParseFiles("/root/go/src/who_is_my_bestie/templates/about.html")
+	t.Execute(w, "")
+}
+
 func acceuil(w http.ResponseWriter, r *http.Request) {
 	t, _ := template.ParseFiles("/root/go/src/who_is_my_bestie/templates/acceuil.html")
 	t.Execute(w, "")
@@ -151,6 +157,7 @@ func main() {
 	r.Host("http://178.62.52.164")
 	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("/root/go/src/who_is_my_bestie/static"))))
 	r.HandleFunc("/fiche", championPage) // set router
+	r.HandleFunc("/about", about) // set router
 	r.HandleFunc("/", acceuil) // set router
 	http.Handle("/", r)
 	err := http.ListenAndServe(":80", nil) // set listen port

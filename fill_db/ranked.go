@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
 	"time"
@@ -71,7 +70,6 @@ func	give_next_id_player(p []ParticipantIdentity) (string){
 		panic(err)
 	}
 	session.Close()
-	fmt.Println(lst_id[random_id])
 	return lst_id[random_id]
 
 
