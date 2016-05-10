@@ -23,6 +23,12 @@
       <div class="principal-champ">
         <img src="http://ddragon.leagueoflegends.com/cdn/6.9.1/img/champion/{{.Champ}}.png">	Champion : {{.Champ}}
       </div>
+      <div class="search-bar">
+            new research ? or clik on another champ.
+            <form action="/fiche" method="GET">
+            <input type="text" name="champion" placeholder="champion">
+            <input type="submit" value="Find champion">
+      </div>
     <div class="wrap">
     <div class="site-wrapper-inner">
 
@@ -30,12 +36,13 @@
         {{with .Temp}}
           {{range .}}
             {{if eq .Pos true}}
-                 <div class="fiche" style="background-color: #040">
+                 <a href="http://mybestie.lol/fiche?champion={{.Champion}}"><div class="fiche" style="background-color: #040">
             {{else}}
-                 <div class="fiche" style="background-color: #400">
+                 <a href="http://mybestie.lol/fiche?champion={{.Champion}}"><div class="fiche" style="background-color: #400">
             {{end}}
-                   <img src="http://ddragon.leagueoflegends.com/cdn/6.9.1/img/champion/{{.Champion}}.png" style="margin-left: 3px;" data-rg-name={{.Champion}} height="48" width="48"> -- Ratio : {{.Ratio}} -- Games: {{.Games}}
-                 </div>
+                   <img src="http://ddragon.leagueoflegends.com/cdn/6.9.1/img/champion/{{.Champion}}.png" style="margin-left: 3px;" data-rg-name={{.Champion}} height="48" width="48"> <p>{{.Champion}}</br>
+Ratio : {{.Ratio}} -- Games: {{.Games}}</p>
+                 </div></a>
           {{end}}
         {{end}}
         </div>

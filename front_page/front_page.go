@@ -121,7 +121,7 @@ func championPage(w http.ResponseWriter, r *http.Request) {
 	champ_query := []rune(champion)
 	champ_query[0] = rune(champion[0] - 32)
 	champion = string(champ_query)
-	fiche.Champ = champion
+
 	if (!strings.ContainsAny(champion, "\",|&*;=%'+-_")) {
 		session, err := mgo.Dial("127.0.0.1:27017")
 		if err != nil {
@@ -134,6 +134,7 @@ func championPage(w http.ResponseWriter, r *http.Request) {
 		champ := Get_elem(champion, 0)
 		session.Close()
 		if champ.ChampionId != 0 {
+			fiche.Champ = champ.Name
 			print_ratio (champ.ChampionId, champ.Name, w)
 		} else {
 			fmt.Fprint(w, "You failed man")
