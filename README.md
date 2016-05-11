@@ -1,7 +1,10 @@
 # who_is_my_bestie
 
-Sit now ON : http://mybestie.lol/
+Site now ON : http://mybestie.lol/
 
-Front end still in progress (As you can see ....)
-But you can still see how many game was played with wich id champion
-(Soon it will be readble ....)
+This site will give you the win rate and the number of games that a champ have with another.
+It wil get constant improve over the time, more useful information, more readable ...
+
+I made this project to improve my Go programming skill. so it's totaly open source.
+You can contact me at guillian.lavanant[at]gmail.com
+
