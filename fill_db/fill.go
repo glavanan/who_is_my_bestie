@@ -149,6 +149,7 @@ func get_id_match(sumid string) (matchid string) {
 	session, err := mgo.Dial("127.0.0.1:27017")
 	session.SetMode(mgo.Monotonic, true)
 	c := session.DB("fill").C("id_match")
+	c.EnsureIndex(mgo.Index{Key: []string{"matchid"}, Unique:true})
 	result := 1
 	for len(match.Matches) > i && (result != 0 || (match.Matches[i].Queue != "TEAM_BUILDER_DRAFT_RANKED_5x5" || match.Matches[i].Season != "SEASON2016")) {
 		result, err = c.Find(bson.M{"matchid" : match.Matches[i].MatchId}).Count()
