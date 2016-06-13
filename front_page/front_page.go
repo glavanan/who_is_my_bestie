@@ -18,6 +18,7 @@ var lst_champ []Champ
 
 type Template struct {
 	Champion string
+	Key string
 	Wins int
 	Games int
 	Ratio string
@@ -27,6 +28,7 @@ type Template struct {
 type Champ struct {
 	ChampionId int `json:"championId" bson:"championId"`
 	Name string `json:"name" bson:"name"`
+	Key string `json:"key" bson:"key"`
 }
 
 type Stat struct {
@@ -81,7 +83,7 @@ func return_format_str(elem Stat, id int, name string) (string) {
 	return str
 }
 
-func print_ratio(champid int, champname string, w http.ResponseWriter) {
+func print_ratio(champ Champ, w http.ResponseWriter) {
 //	fmt.Fprint(w, "Liste des ratio avec : ")
 //	fmt.Fprint(w, champname + "\n")
 	session, err := mgo.Dial("127.0.0.1:27017")
@@ -91,21 +93,21 @@ func print_ratio(champid int, champname string, w http.ResponseWriter) {
 	session.SetMode(mgo.Monotonic, true)
 	c := session.DB("champ").C("stat")
 	var stat []Stat
-	c.Find(bson.M{"champion1": champid}).All(&stat)
+	c.Find(bson.M{"champion1": champ.ChampionId}).All(&stat)
 	var temp Templates
 	for _, elem := range stat {
 		if elem.Games > 9 {
 			value := float64(elem.Win) / float64(elem.Games) * float64(100)
 			ratio := strconv.FormatFloat(value, 'f', 2, 64)
-			temp = append(temp, Template {Champion: Get_elem("", elem.Champion2).Name, Wins: elem.Win, Games: elem.Games, Ratio: ratio, Pos: (value >= 50)})
+			temp = append(temp, Template {Champion: Get_elem("", elem.Champion2).Name, Key: Get_elem("", elem.Champion2).Key, Wins: elem.Win, Games: elem.Games, Ratio: ratio, Pos: (value >= 50)})
 		}
 	}
-	c.Find(bson.M{"champion2": champid}).All(&stat)
+	c.Find(bson.M{"champion2": champ.ChampionId}).All(&stat)
 	for _, elem := range stat {
 		if elem.Games > 9 {
 			value := float64(elem.Win) / float64(elem.Games) * float64(100)
 			ratio := strconv.FormatFloat(value, 'f', 2, 64)
-			temp = append(temp, Template {Champion: Get_elem("", elem.Champion1).Name, Wins: elem.Win, Games: elem.Games, Ratio: ratio, Pos: (value >= 50)})
+			temp = append(temp, Template {Champion: Get_elem("", elem.Champion1).Name, Key: Get_elem("", elem.Champion1).Key, Wins: elem.Win, Games: elem.Games, Ratio: ratio, Pos: (value >= 50)})
 		}
 	}
 	fmt.Println(temp.Len())
@@ -121,24 +123,20 @@ func championPage(w http.ResponseWriter, r *http.Request) {
 	champ_query := []rune(champion)
 	champ_query[0] = rune(champion[0] - 32)
 	champion = string(champ_query)
-
-	if (!strings.ContainsAny(champion, "\",|&*;=%'+-_")) {
-		session, err := mgo.Dial("127.0.0.1:27017")
-		if err != nil {
-			panic(err)
-		}
-		session.SetMode(mgo.Monotonic, true)
-		c := session.DB("champ").C("fiche")
-
-		err = c.Find(nil).All(&lst_champ)
-		champ := Get_elem(champion, 0)
-		session.Close()
-		if champ.ChampionId != 0 {
-			fiche.Champ = champ.Name
-			print_ratio (champ.ChampionId, champ.Name, w)
-		} else {
-			fmt.Fprint(w, "You failed man")
-		}
+	session, err := mgo.Dial("127.0.0.1:27017")
+	if err != nil {
+		panic(err)
+	}
+	session.SetMode(mgo.Monotonic, true)
+	c := session.DB("champ").C("fiche")
+	err = c.Find(nil).All(&lst_champ)
+	champ := Get_elem(champion, 0)
+	session.Close()
+	if champ.ChampionId != 0 {
+		fiche.Champ = champ.Key
+		print_ratio (champ, w)
+	} else {
+		fmt.Fprint(w, "You failed man")
 	}
 }
 

@@ -8,6 +8,7 @@ import (
 	"gopkg.in/mgo.v2/bson"
 	"encoding/json"
 	"strconv"
+	"time"
 )
 
 //store information of match
@@ -132,10 +133,12 @@ func get_id_match(sumid string) (matchid string) {
 	if conf.Api_key == "" {
 		fill_conf()
 	}
+	time.Sleep(300 * time.Millisecond)
 	resp, err := http.Get("https://euw.api.pvp.net/api/lol/euw/v2.2/matchlist/by-summoner/" + sumid + "?api_key=" + conf.Api_key)
 	if err != nil {
 		panic(err)
 	}
+	defer resp.Body.Close()
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		panic(err)
@@ -145,7 +148,7 @@ func get_id_match(sumid string) (matchid string) {
 	if err != nil {
 		panic(err)
 	}
-	i := 0
+	i := 1
 	session, err := mgo.Dial("127.0.0.1:27017")
 	session.SetMode(mgo.Monotonic, true)
 	c := session.DB("fill").C("id_match")
@@ -157,7 +160,9 @@ func get_id_match(sumid string) (matchid string) {
 	}
 	fmt.Println(i, " game on :", len(match.Matches))
 	if result > 0 || i >= len(match.Matches) {
-		return strconv.Itoa(match.Matches[0].MatchId)
+		session.Close()
+		time.Sleep(30 * time.Millisecond)
+		return get_id_match(get_new_player_id(sumid))
 	}
 	c.Insert(bson.M{"matchid" : match.Matches[i - 1].MatchId})
 	session.Close()
@@ -174,8 +179,9 @@ func fill_db(teamw []int, teaml []int) {
 	var stat Stat
 	for i, elem := range teamw {
 		for j := i + 1; j < len(teamw); j++ {
-			if elem < teamw[j] {
-				c.Find(bson.M{"champion1": elem, "champion2": teamw[j]}).One(&stat)
+			stat = Stat{0, 0, 0, 0}
+			c.Find(bson.M{"champion1": elem, "champion2": teamw[j]}).One(&stat)
+			if stat != (Stat{0,0,0,0}) {
 				c.Update(bson.M{"champion1": elem,"champion2": teamw[j]}, bson.M{"$set": bson.M{"games": stat.Games + 1,"win": stat.Win + 1}})
 			} else {
 				c.Find(bson.M {	"champion1": teamw[j],"champion2": elem}).One(&stat)
@@ -185,8 +191,9 @@ func fill_db(teamw []int, teaml []int) {
 	}
 	for i, elem := range teaml {
 		for j := i + 1; j < len(teaml); j++ {
-			if elem < teaml[j] {
-				c.Find(bson.M{"champion1": elem, "champion2": teaml[j]}).One(&stat)
+			stat = Stat{0, 0, 0, 0}
+			c.Find(bson.M{"champion1": elem, "champion2": teaml[j]}).One(&stat)
+			if stat != (Stat{0,0,0,0}) {
 				c.Update(bson.M{"champion1": elem, "champion2": teaml[j]}, bson.M{"$set": bson.M{"games": stat.Games + 1, "win": stat.Win}})
 			} else {
 				c.Find(bson.M{"champion1": teaml[j], "champion2": elem}).One(&stat)
@@ -202,15 +209,18 @@ func get_match(matchid string) {
 	if conf.Api_key == "" {
 		fill_conf()
 	}
+	time.Sleep(200 * time.Millisecond)
 	resp, err := http.Get ("https://euw.api.pvp.net/api/lol/euw/v2.2/match/" + matchid + "?includeTimeline=false&api_key=" + conf.Api_key)
 	if err != nil {
 		panic(err)
 	}
+	defer resp.Body.Close()
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		panic(err)
 	}
 	var match Match
+//	fmt.Println(string(body))
 	err = json.Unmarshal(body, &match)
 	var team1, team2 []int
 	for i := 0; i < len(match.Participants); i++ {
@@ -229,8 +239,8 @@ func get_match(matchid string) {
 }
 
 func main() {
-	rank = []string {"CHALLENGER", "MASTER", "DIAMOND", "PLATINUM", "GOLD"}
-	for i := 0; i < 3; i++ {
+	rank = []string {"CHALLENGER", "MASTER", "DIAMOND", "PLATINUM"}
+	for i := 0; i < 10; i++ {
 		get_match(get_id_match(get_id_player()))
 	}
 }
