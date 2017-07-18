@@ -1,6 +1,6 @@
 # who_is_my_bestie
 
-Site now ON : http://mybestie.lol/
+Site now OFF : http://mybestie.lol/
 
 This site will give you the win rate and the number of games that a champ have with another.
 It wil get constant improve over the time, more useful information, more readable ...
